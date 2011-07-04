@@ -110,7 +110,7 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	# We don't use CONFIG['archdir'] and the like because we want
 	# the files to be installed to /usr, and the Ruby interpreter
 	# on the packaging machine might be in /usr/local.
-	fake_libdir = "#{fakeroot}/#{prefix}lib/ruby/#{CONFIG['ruby_version']}"
+	fake_libdir = "#{fakeroot}/#{prefix}/lib/ruby/#{CONFIG['ruby_version']}"
 	fake_native_support_dir = "#{fakeroot}/#{prefix}/lib/ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
 	fake_agents_dir = "#{fakeroot}#{NATIVELY_PACKAGED_AGENTS_DIR}"
 	fake_helper_scripts_dir = "#{fakeroot}#{NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR}"
