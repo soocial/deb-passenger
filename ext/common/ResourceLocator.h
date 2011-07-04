@@ -65,13 +65,13 @@ public:
 				!fileExists(root + "/DEVELOPERS.TXT");
 			
 			if (nativelyPackaged) {
-				agentsDir           = "/usr/lib/phusion-passenger/agents";
-				helperScriptsDir    = "/usr/share/phusion-passenger/helper-scripts";
-				resourcesDir        = "/usr/share/phusion-passenger";
-				docDir              = "/usr/share/doc/phusion-passenger";
+				agentsDir           = "/opt/rubyee/lib/phusion-passenger/agents";
+				helperScriptsDir    = "/opt/rubyee/share/phusion-passenger/helper-scripts";
+				resourcesDir        = "/opt/rubyee/share/phusion-passenger";
+				docDir              = "/opt/rubyee/share/doc/phusion-passenger";
 				rubyLibDir          = "";
-				compilableSourceDir = "/usr/share/phusion-passenger/compilable-source";
-				apache2Module       = "/usr/lib/apache2/modules/mod_passenger.so";
+				compilableSourceDir = "/opt/rubyee/share/phusion-passenger/compilable-source";
+				apache2Module       = "/opt/rubyee/lib/apache2/modules/mod_passenger.so";
 			} else {
 				agentsDir           = root + "/agents";
 				helperScriptsDir    = root + "/helper-scripts";
