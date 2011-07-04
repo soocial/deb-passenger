@@ -46,12 +46,12 @@ module PhusionPassenger
 		return @natively_packaged
 	end
 	
-	NATIVELY_PACKAGED_SOURCE_ROOT        = "/usr/share/phusion-passenger/source"
-	NATIVELY_PACKAGED_DOCDIR             = "/usr/share/doc/phusion-passenger"
-	NATIVELY_PACKAGED_RESOURCES_DIR      = "/usr/share/phusion-passenger"
-	NATIVELY_PACKAGED_AGENTS_DIR         = "/usr/lib/phusion-passenger/agents"
-	NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR = "/usr/share/phusion-passenger/helper-scripts"
-	NATIVELY_PACKAGED_APACHE2_MODULE     = "/usr/lib/apache2/modules/mod_passenger.so"
+	NATIVELY_PACKAGED_SOURCE_ROOT        = "/opt/rubyee/share/phusion-passenger/source"
+	NATIVELY_PACKAGED_DOCDIR             = "/opt/rubyee/share/doc/phusion-passenger"
+	NATIVELY_PACKAGED_RESOURCES_DIR      = "/opt/rubyee/share/phusion-passenger"
+	NATIVELY_PACKAGED_AGENTS_DIR         = "/opt/rubyee/lib/phusion-passenger/agents"
+	NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR = "/opt/rubyee/share/phusion-passenger/helper-scripts"
+	NATIVELY_PACKAGED_APACHE2_MODULE     = "/opt/rubyee/lib/apache2/modules/mod_passenger.so"
 	
 	# Directory containing the Phusion Passenger Ruby libraries.
 	LIBDIR         = File.expand_path(File.dirname(__FILE__))
@@ -63,7 +63,7 @@ module PhusionPassenger
 	LOCAL_DIR      = ".passenger"
 	
 	# Directories in which to look for plugins.
-	PLUGIN_DIRS    = ["/usr/share/phusion-passenger/plugins",
+	PLUGIN_DIRS    = ["/opt/rubyee/share/phusion-passenger/plugins",
 		"/usr/local/share/phusion-passenger/plugins",
 		"~/#{LOCAL_DIR}/plugins"]
 	

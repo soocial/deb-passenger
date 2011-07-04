@@ -105,18 +105,19 @@ task :fakeroot => [:apache2, :nginx] + Packaging::ASCII_DOCS do
 	require 'fileutils'
 	include Config
 	fakeroot = "pkg/fakeroot"
+	prefix = ENV['PREFIX']
 	
 	# We don't use CONFIG['archdir'] and the like because we want
 	# the files to be installed to /usr, and the Ruby interpreter
 	# on the packaging machine might be in /usr/local.
-	fake_libdir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}"
-	fake_native_support_dir = "#{fakeroot}/usr/lib/ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
+	fake_libdir = "#{fakeroot}/#{prefix}lib/ruby/#{CONFIG['ruby_version']}"
+	fake_native_support_dir = "#{fakeroot}/#{prefix}/lib/ruby/#{CONFIG['ruby_version']}/#{CONFIG['arch']}"
 	fake_agents_dir = "#{fakeroot}#{NATIVELY_PACKAGED_AGENTS_DIR}"
 	fake_helper_scripts_dir = "#{fakeroot}#{NATIVELY_PACKAGED_HELPER_SCRIPTS_DIR}"
-	fake_resources_dir = "#{fakeroot}/usr/share/phusion-passenger"
+	fake_resources_dir = "#{fakeroot}/#{prefix}/share/phusion-passenger"
 	fake_docdir = "#{fakeroot}#{NATIVELY_PACKAGED_DOCDIR}"
-	fake_bindir = "#{fakeroot}/usr/bin"
-	fake_sbindir = "#{fakeroot}/usr/sbin"
+	fake_bindir = "#{fakeroot}/#{prefix}/bin"
+	fake_sbindir = "#{fakeroot}/#{prefix}/sbin"
 	fake_source_root = "#{fakeroot}#{NATIVELY_PACKAGED_SOURCE_ROOT}"
 	fake_apache2_module = "#{fakeroot}#{NATIVELY_PACKAGED_APACHE2_MODULE}"
 	fake_apache2_module_dir = File.dirname(fake_apache2_module)

@@ -1,4 +1,4 @@
-usr/lib/ruby
-usr/lib/phusion-passenger
-usr/share/phusion-passenger
-usr/sbin
+opt/rubyee/lib/ruby
+opt/rubyee/lib/phusion-passenger
+opt/rubyee/share/phusion-passenger
+opt/rubyee/sbin

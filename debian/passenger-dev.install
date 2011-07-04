@@ -1,1 +1,1 @@
-../../ext/{boost,common,google,nginx,oxt,ruby} usr/lib/phusion-passenger/ext/
+../../ext/{boost,common,google,nginx,oxt,ruby} opt/rubyee/lib/phusion-passenger/ext/
