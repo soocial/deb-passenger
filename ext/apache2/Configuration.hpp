@@ -26,17 +26,12 @@
 #define _PASSENGER_CONFIGURATION_HPP_
 
 #include "Utils.h"
-#include "MessageChannel.h"
 #include "Logging.h"
 #include "ServerInstanceDir.h"
 #include "Constants.h"
 
 /* The APR headers must come after the Passenger headers. See Hooks.cpp
  * to learn why.
- *
- * MessageChannel.h must be included -- even though we don't actually use
- * MessageChannel.h in here, it's necessary to make sure that apr_want.h
- * doesn't b0rk on 'struct iovec'.
  */
 #include "Configuration.h"
 
@@ -197,6 +192,11 @@ struct DirConfig {
 	 */
 	Threeway unionStationSupport;
 	
+	/**
+	 * Whether response buffering support is enabled.
+	 */
+	Threeway bufferResponse;
+	
 	/*************************************/
 	/*************************************/
 	
@@ -332,6 +332,10 @@ struct DirConfig {
 	bool useUnionStation() const {
 		return unionStationSupport == ENABLED;
 	}
+
+	bool getBufferResponse() const {
+		return bufferResponse != DISABLED;
+	}
 	
 	string getUnionStationFilterString() const {
 		if (unionStationFilters.empty()) {
@@ -399,6 +403,8 @@ struct ServerConfig {
 	string unionStationGatewayAddress;
 	int unionStationGatewayPort;
 	string unionStationGatewayCert;
+	string unionStationProxyAddress;
+	string unionStationProxyType;
 	
 	/** Directory in which analytics logs should be saved. */
 	string analyticsLogDir;
@@ -421,7 +427,9 @@ struct ServerConfig {
 		tempDir            = getSystemTempDir();
 		unionStationGatewayAddress = DEFAULT_UNION_STATION_GATEWAY_ADDRESS;
 		unionStationGatewayPort    = DEFAULT_UNION_STATION_GATEWAY_PORT;
-		unionStationGatewayCert    = "";
+		unionStationGatewayCert    = string();
+		unionStationProxyAddress   = string();
+		unionStationProxyType      = string();
 		analyticsLogUser   = DEFAULT_ANALYTICS_LOG_USER;
 		analyticsLogGroup  = DEFAULT_ANALYTICS_LOG_GROUP;
 		analyticsLogPermissions = DEFAULT_ANALYTICS_LOG_PERMISSIONS;
@@ -465,6 +473,13 @@ struct ServerConfig {
 			analyticsLogDir = string(getSystemTempDir()) +
 				"/passenger-analytics-logs." +
 				username;
+		}
+		
+		if (unionStationProxyType != ""
+		 && unionStationProxyType != "http"
+		 && unionStationProxyType != "socks5") {
+			throw ConfigurationException(string("The option 'UnionStationProxyType' ") +
+				"may only be set to 'http' or 'socks5'.");
 		}
 	}
 };

@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/resource.h>
+#include <sys/uio.h>
 #include <libgen.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -41,7 +42,6 @@
 #include <unistd.h>
 #include <signal.h>
 #include <FileDescriptor.h>
-#include <MessageChannel.h>
 #include <MessageServer.h>
 #include <ResourceLocator.h>
 #include <Exceptions.h>
@@ -49,6 +49,7 @@
 #include <Utils/Base64.h>
 #include <Utils/CachedFileStat.hpp>
 #include <Utils/StrIntUtils.h>
+#include <Utils/HttpHeaderBufferer.h>
 
 #ifndef HOST_NAME_MAX
 	#if defined(_POSIX_HOST_NAME_MAX)
@@ -68,6 +69,7 @@
 namespace Passenger {
 
 static string passengerTempDir;
+HttpHeaderBufferer::StaticData HttpHeaderBufferer::staticData;
 
 namespace {
 	/**

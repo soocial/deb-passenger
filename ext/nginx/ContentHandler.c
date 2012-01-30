@@ -223,11 +223,7 @@ find_base_uri(ngx_http_request_t *r, const passenger_loc_conf_t *loc,
 static void
 set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_conf_t *upstream_config) {
     ngx_http_upstream_server_t *servers = upstream_config->upstream->servers->elts;
-    #if NGINX_VERSION_NUM >= 8000
-        ngx_addr_t             *address = &servers[0].addrs[0];
-    #else
-        ngx_peer_addr_t        *address = &servers[0].addrs[0];
-    #endif
+    ngx_addr_t                 *address = &servers[0].addrs[0];
     const char                 *request_socket_filename;
     unsigned int                request_socket_filename_len;
     struct sockaddr_un         *sockaddr;
@@ -311,6 +307,31 @@ set_upstream_server_address(ngx_http_upstream_t *upstream, ngx_http_upstream_con
     } while (0)
 
 
+#if (NGX_HTTP_CACHE)
+
+static ngx_int_t
+create_key(ngx_http_request_t *r)
+{
+    ngx_str_t            *key;
+    passenger_loc_conf_t *slcf;
+
+    key = ngx_array_push(&r->cache->keys);
+    if (key == NULL) {
+        return NGX_ERROR;
+    }
+
+    slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
+
+    if (ngx_http_complex_value(r, &slcf->cache_key, key) != NGX_OK) {
+        return NGX_ERROR;
+    }
+
+    return NGX_OK;
+}
+
+#endif
+
+
 static ngx_int_t
 create_request(ngx_http_request_t *r)
 {
@@ -321,12 +342,15 @@ create_request(ngx_http_request_t *r)
     size_t                         len, size, key_len, val_len, content_length;
     const u_char                  *app_type_string;
     size_t                         app_type_string_len;
+    int                            server_name_len;
     ngx_str_t                      escaped_uri;
     ngx_str_t                     *union_station_filters = NULL;
     u_char                         min_instances_string[12];
+    u_char                         max_requests_string[12];
     u_char                         framework_spawner_idle_time_string[12];
     u_char                         app_spawner_idle_time_string[12];
     u_char                        *end;
+    void                          *tmp;
     ngx_uint_t                     i, n;
     ngx_buf_t                     *b;
     ngx_chain_t                   *cl, *body;
@@ -334,16 +358,16 @@ create_request(ngx_http_request_t *r)
     ngx_table_elt_t               *header;
     ngx_http_script_code_pt        code;
     ngx_http_script_engine_t       e, le;
+    ngx_http_core_srv_conf_t      *cscf;
     passenger_loc_conf_t          *slcf;
-    passenger_main_conf_t         *main_conf;
     passenger_context_t           *context;
     ngx_http_script_len_code_pt    lcode;
     #if (NGX_HTTP_SSL)
         ngx_http_ssl_srv_conf_t   *ssl_conf;
     #endif
     
+    cscf = ngx_http_get_module_srv_conf(r, ngx_http_core_module);
     slcf = ngx_http_get_module_loc_conf(r, ngx_http_passenger_module);
-    main_conf = &passenger_main_conf;
     context = ngx_http_get_module_ctx(r, ngx_http_passenger_module);
     if (context == NULL) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
@@ -412,6 +436,19 @@ create_request(ngx_http_request_t *r)
         len += 1 + r->args.len;
     }
     
+    /* SERVER_NAME; must be equal to HTTP_HOST without the port part */
+    if (r->headers_in.host != NULL) {
+        tmp = memchr(r->headers_in.host->value.data, ':', r->headers_in.host->value.len);
+        if (tmp == NULL) {
+            server_name_len = r->headers_in.host->value.len;
+        } else {
+            server_name_len = (int) ((const u_char *) tmp - r->headers_in.host->value.data);
+        }
+    } else {
+        server_name_len = cscf->server_name.len;
+    }
+    len += sizeof("SERVER_NAME") + server_name_len + 1;
+    
     /* Various other HTTP headers. */
     if (r->headers_in.content_type != NULL
      && r->headers_in.content_type->value.len > 0) {
@@ -452,6 +489,14 @@ create_request(ngx_http_request_t *r)
     *end = '\0';
     len += sizeof("PASSENGER_MIN_INSTANCES") +
            ngx_strlen(min_instances_string) + 1;
+
+    end = ngx_snprintf(max_requests_string,
+                       sizeof(max_requests_string) - 1,
+                       "%d",
+                       (slcf->max_requests == (ngx_int_t) -1) ? 0 : slcf->max_requests);
+    *end = '\0';
+    len += sizeof("PASSENGER_MAX_REQUESTS") +
+           ngx_strlen(max_requests_string) + 1;
     
     end = ngx_snprintf(framework_spawner_idle_time_string,
                        sizeof(framework_spawner_idle_time_string) - 1,
@@ -637,6 +682,17 @@ create_request(ngx_http_request_t *r)
     }
     b->last = ngx_copy(b->last, "", 1);
     
+    /* SERVER_NAME */
+    b->last = ngx_copy(b->last, "SERVER_NAME", sizeof("SERVER_NAME"));
+    if (r->headers_in.host != NULL) {
+        b->last = ngx_copy(b->last, r->headers_in.host->value.data,
+                           server_name_len);
+    } else {
+        b->last = ngx_copy(b->last, cscf->server_name.data,
+                           server_name_len);
+    }
+    b->last = ngx_copy(b->last, "", 1);
+    
     /* Various other HTTP headers. */
     if (r->headers_in.content_type != NULL
      && r->headers_in.content_type->value.len > 0) {
@@ -696,6 +752,11 @@ create_request(ngx_http_request_t *r)
                        sizeof("PASSENGER_MIN_INSTANCES"));
     b->last = ngx_copy(b->last, min_instances_string,
                        ngx_strlen(min_instances_string) + 1);
+
+    b->last = ngx_copy(b->last, "PASSENGER_MAX_REQUESTS",
+                       sizeof("PASSENGER_MAX_REQUESTS"));
+    b->last = ngx_copy(b->last, max_requests_string,
+                       ngx_strlen(max_requests_string) + 1);
 
     b->last = ngx_copy(b->last, "PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME",
                        sizeof("PASSENGER_FRAMEWORK_SPAWNER_IDLE_TIME"));
@@ -1368,24 +1429,19 @@ passenger_content_handler(ngx_http_request_t *r)
     
     /* Setup upstream stuff and prepare sending the request to the backend. */
     
-    u = ngx_pcalloc(r->pool, sizeof(ngx_http_upstream_t));
-    if (u == NULL) {
+    if (ngx_http_upstream_create(r) != NGX_OK) {
         return NGX_HTTP_INTERNAL_SERVER_ERROR;
     }
+    u = r->upstream;
     
     u->schema = passenger_schema_string;
-
-    u->peer.log = r->connection->log;
-    u->peer.log_error = NGX_ERROR_ERR;
-#if (NGX_THREADS)
-    u->peer.lock = &r->connection->lock;
-#endif
-
     u->output.tag = (ngx_buf_tag_t) &ngx_http_passenger_module;
-
     set_upstream_server_address(u, &slcf->upstream_config);
     u->conf = &slcf->upstream_config;
 
+#if (NGX_HTTP_CACHE)
+    u->create_key       = create_key;
+#endif
     u->create_request   = create_request;
     u->reinit_request   = reinit_request;
     u->process_header   = process_status_line;
@@ -1400,8 +1456,7 @@ passenger_content_handler(ngx_http_request_t *r)
     }
 
     u->pipe->input_filter = ngx_event_pipe_copy_input_filter;
-
-    r->upstream = u;
+    u->pipe->input_ctx = r;
 
     rc = ngx_http_read_client_request_body(r, ngx_http_upstream_init);
 

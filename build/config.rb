@@ -24,6 +24,7 @@
 OPTIMIZE = boolean_option("OPTIMIZE")
 CC       = string_option("CC", "gcc")
 CXX      = string_option("CXX", "g++")
+# TODO: consider -fcommon
 if OPTIMIZE
 	OPTIMIZATION_FLAGS = "#{PlatformInfo.debugging_cflags} -O2 -DBOOST_DISABLE_ASSERTS".strip
 else
@@ -32,7 +33,10 @@ end
 
 # Extra compiler flags that should always be passed to the C/C++ compiler.
 # Should be included last in the command string, even after PlatformInfo.portability_cflags.
-EXTRA_CXXFLAGS = "-Wall #{OPTIMIZATION_FLAGS}".strip
+EXTRA_CXXFLAGS = "-Wextra -Wno-unused-parameter -Wno-parentheses -Wpointer-arith -Wwrite-strings -Wno-long-long"
+EXTRA_CXXFLAGS << " -Wno-missing-field-initializers" if PlatformInfo.compiler_supports_wno_missing_field_initializers_flag?
+EXTRA_CXXFLAGS << " -mno-tls-direct-seg-refs" if PlatformInfo.requires_no_tls_direct_seg_refs? && PlatformInfo.compiler_supports_no_tls_direct_seg_refs_option?
+EXTRA_CXXFLAGS << " #{OPTIMIZATION_FLAGS}" if !OPTIMIZATION_FLAGS.empty?
 
 # Extra linker flags that should always be passed to the linker.
 # Should be included last in the command string, even after PlatformInfo.portability_ldflags.

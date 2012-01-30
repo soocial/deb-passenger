@@ -247,7 +247,7 @@ about setting up Ruby on Rails and Phusion Passenger on OpenSolaris and EC2.
 
 ==== Via a gem or a source tarball ====
 
-To ugrade or downgrade Phusion Passenger via the gem or the source tarball, install the newer
+To upgrade or downgrade Phusion Passenger via the gem or the source tarball, install the newer
 or older version as you normally would; that is, install the gem or unpack the tarball, and
 run `passenger-install-apache2-module`. Eventually `passenger-install-apache2-module` will tell
 you to copy & paste some settings into the Apache configuration file; something that looks along
@@ -345,7 +345,7 @@ done this, you need to remove the Phusion Passenger files.
   `sudo apt-get remove libapache2-mod-passenger`.
 
 
-== Deploying a Ruby on Rails application ==
+== Deploying a Ruby on Rails 1.x or 2.x (but NOT Rails >= 3.x) application ==
 
 Suppose you have a Ruby on Rails application in '/webapps/mycook', and you own
 the domain 'www.mycook.com'. You can either deploy your application to the
@@ -490,7 +490,7 @@ a shell console, just like one would normally run migrations.
 See <<capistrano,Capistrano recipe>>.
 
 
-== Deploying a Rack-based Ruby application ==
+== Deploying a Rack-based Ruby application (including Rails >= 3) ==
 
 Phusion Passenger supports arbitrary Ruby web applications that follow the
 link:http://rack.rubyforge.org/[Rack] interface.
@@ -923,6 +923,70 @@ allow the attacker to cause a Denial-of-Service.
 You can prevent this from happening by pointing PassengerRestartDir to a
 directory that's readable by Apache, but only writable by administrators.
 
+[[PassengerBufferResponse]]
+=== PassengerBufferResponse <on|off> ===
+When turned on, application-generated responses are buffered in memory. By buffering
+responses, protection is provided against slow HTTP clients that can not read your
+response immediately.
+
+For example, consider an HTTP client that's on a dial-up modem link, and your
+application instance generates a 2 MB response. If response buffering is turned
+off then your application instance will be blocked until the entire 2 MB has been
+sent out to the HTTP client. This disallows your application instance to do any useful
+work in the mean time. By enabling response buffering, Phusion Passenger will read
+the application response as quickly as possible and will take care of slow clients.
+
+However, keep in mind that enabling this option will make streaming responses
+impossible. Consider for example this piece of Rails code:
+
+--------------------------------
+render :text => lambda { |response, output|
+    10.times do |i|
+        output.write("entry #{i}\n")
+        output.flush
+        sleep 1
+    end
+}
+--------------------------------
+
+...or this piece of Rack code:
+
+--------------------------------
+class Response
+    def each
+        10.times do |i|
+            yield("entry #{i}\n")
+            sleep 1
+        end
+    end
+end
+
+app = lambda do |env|
+    [200, { "Content-Type" => "text/plain" }, Response.new]
+end
+--------------------------------
+
+When response buffering is turned on, Phusion Passenger will wait until
+the application is done sending the entire response before forwarding it
+to the client. The client will not receive anything for 10 seconds,
+after which it receives the entire response at once.
+When response buffering is turned off, it works as expected: the client
+receives an "entry X" message every second for 10 seconds.
+
+This option may occur in the following places:
+
+ * In the global server configuration.
+ * In a virtual host configuration block.
+ * In a `<Directory>` or `<Location>` block.
+ * In '.htaccess'.
+
+In each place, it may be specified at most once. The default value is 'on'.
+
+[NOTE]
+=====================================================
+The <<PassengerBufferResponse,PassengerBufferResponse>> directive should be turned off
+if responses can be huge. Because entire responses are buffered in memory when turned on.
+=====================================================
 
 === Security options ===
 
@@ -935,7 +999,7 @@ The default value is 'on'.
 
 ==== PassengerUser <username> ====
 If <<user_switching,user switching support>> is enabled, then Phusion Passenger will
-by default run the web application as the owner if the file 'config/environment.rb'
+by default run the web application as the owner of the file 'config/environment.rb'
 (for Rails apps) or 'config.ru' (for Rack apps). This option allows you to override
 that behavior and explicitly set a user to run the web application as, regardless
 of the ownership of 'environment.rb'/'config.ru'.
@@ -1951,7 +2015,7 @@ To solve this problem, please <<specifying_correct_apache_install,specify the
 correct Apache installation>>, and <<install_passenger,reinstall Phusion
 Passenger>>.
 
-==== I get a "304 Forbidden" error ====
+==== I get a "403 Forbidden" error ====
 
 See next subsection.
 

@@ -209,6 +209,7 @@ passenger_config_create_dir(apr_pool_t *p, char *dirspec) {
 	config->uploadBufferDir = NULL;
 	config->friendlyErrorPages = DirConfig::UNSET;
 	config->unionStationSupport = DirConfig::UNSET;
+	config->bufferResponse = DirConfig::UNSET;
 	/*************************************/
 	return config;
 }
@@ -259,6 +260,7 @@ passenger_config_merge_dir(apr_pool_t *p, void *basev, void *addv) {
 	MERGE_THREEWAY_CONFIG(allowEncodedSlashes);
 	MERGE_THREEWAY_CONFIG(friendlyErrorPages);
 	MERGE_THREEWAY_CONFIG(unionStationSupport);
+	MERGE_THREEWAY_CONFIG(bufferResponse);
 	/*************************************/
 	return config;
 }
@@ -282,6 +284,8 @@ DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_temp_dir, tempDir)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_address, unionStationGatewayAddress)
 DEFINE_SERVER_INT_CONFIG_SETTER(cmd_union_station_gateway_port, unionStationGatewayPort, int, 1)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_gateway_cert, unionStationGatewayCert)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_address, unionStationProxyAddress)
+DEFINE_SERVER_STR_CONFIG_SETTER(cmd_union_station_proxy_type, unionStationProxyType)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_dir, analyticsLogDir)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_user, analyticsLogUser)
 DEFINE_SERVER_STR_CONFIG_SETTER(cmd_passenger_analytics_log_group, analyticsLogGroup)
@@ -311,6 +315,7 @@ DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_resolve_symlinks_in_document_roo
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_allow_encoded_slashes, allowEncodedSlashes)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_friendly_error_pages, friendlyErrorPages)
 DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_union_station_support, unionStationSupport)
+DEFINE_DIR_THREEWAY_CONFIG_SETTER(cmd_passenger_buffer_response, bufferResponse)
 
 static const char *
 cmd_passenger_spawn_method(cmd_parms *cmd, void *pcfg, const char *arg) {
@@ -584,6 +589,11 @@ const command_rec passenger_commands[] = {
 		NULL,
 		OR_ALL,
 		"A filter for Union Station data."),
+	AP_INIT_FLAG("PassengerBufferResponse",
+		(FlagFunc) cmd_passenger_buffer_response,
+		NULL,
+		OR_ALL,
+		"Whether to enable buffering response."),
 	AP_INIT_FLAG("PassengerResolveSymlinksInDocumentRoot",
 		(FlagFunc) cmd_passenger_resolve_symlinks_in_document_root,
 		NULL,
@@ -619,6 +629,16 @@ const command_rec passenger_commands[] = {
 		NULL,
 		RSRC_CONF,
 		"The Union Station Gateway certificate."),
+	AP_INIT_TAKE1("UnionStationProxyAddress",
+		(Take1Func) cmd_union_station_proxy_address,
+		NULL,
+		RSRC_CONF,
+		"The address of the proxy that should be used for sending data to Union Station."),
+	AP_INIT_TAKE1("UnionStationProxyType",
+		(Take1Func) cmd_union_station_proxy_type,
+		NULL,
+		RSRC_CONF,
+		"The type of the proxy that should be used for sending data to Union Station."),
 	AP_INIT_TAKE1("PassengerAnalyticsLogDir",
 		(Take1Func) cmd_passenger_analytics_log_dir,
 		NULL,
